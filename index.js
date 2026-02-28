@@ -36,7 +36,17 @@ app.use(express.json({ limit: "5mb" }));  // batches can be large
 
 // ─── Health check ────────────────────────────────────────────
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", time: new Date().toISOString() });
+  const dbState = mongoose.connection.readyState;
+  const dbStates = { 0: "disconnected", 1: "connected", 2: "connecting", 3: "disconnecting" };
+  res.json({
+    status:       "ok",
+    time:         new Date().toISOString(),
+    db:           {
+      state:      dbStates[dbState] || "unknown",
+      name:       mongoose.connection.db?.databaseName || "not connected",
+      host:       mongoose.connection.host || "unknown"
+    }
+  });
 });
 
 // ─── Routes ──────────────────────────────────────────────────
