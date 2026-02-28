@@ -142,26 +142,52 @@ async function trainForWallet(wallet) {
     model.dispose();
     console.log(`[Trainer] Model serialised (${modelBuffer.length} bytes)`);
 
-    // ── 5. Upload to 0G Storage ───────────────────────────────
-    const rootHash = await uploadBuffer(modelBuffer, `model_${wallet.slice(0, 8)}.bin`);
+    // ── 5. Upload to 0G Storage (with MongoDB fallback) ──────
+    let rootHash    = null;
+    let storageType = "local";   // default: save to MongoDB
+    let uploadNote  = "";
+
+    try {
+      rootHash    = await uploadBuffer(modelBuffer, `model_${wallet.slice(0, 8)}.bin`);
+      storageType = "0g";
+      uploadNote  = `0G hash: ${rootHash}`;
+      console.log(`✅ [Trainer] Uploaded to 0G Storage → ${rootHash}`);
+    } catch (uploadErr) {
+      // 0G upload failed (most likely: 0 A0GI balance).
+      // Save weights in MongoDB so the model is still usable for predictions.
+      uploadNote = `0G upload failed (${uploadErr.message}). Model saved locally in MongoDB.`;
+      console.warn(`⚠️  [Trainer] 0G upload failed – falling back to MongoDB storage.`);
+      console.warn(`    Reason: ${uploadErr.message}`);
+      console.warn(`    ➡  To push to 0G later: POST /0g/push/${wallet}`);
+    }
 
     // ── 6. Update MongoDB record ──────────────────────────────
+    const updatePayload = {
+      sampleCount: N,
+      trainedAt:   new Date(),
+      status:      "ready",
+      storageType,
+      errorMsg:    storageType === "local" ? uploadNote : null
+    };
+
+    if (storageType === "0g") {
+      updatePayload.fileHash    = rootHash;
+      updatePayload.modelBuffer = undefined;   // clear any old local copy
+    } else {
+      updatePayload.modelBuffer = modelBuffer; // store weights in Mongo
+      updatePayload.fileHash    = null;
+    }
+
     const record = await ModelRecord.findOneAndUpdate(
       { wallet },
-      {
-        fileHash:    rootHash,
-        sampleCount: N,
-        trainedAt:   new Date(),
-        status:      "ready",
-        errorMsg:    null
-      },
+      updatePayload,
       { upsert: true, new: true }
     );
 
-    // Invalidate the download cache so next predict fetches the new model
-    invalidateCache(rootHash);
+    if (storageType === "0g") invalidateCache(rootHash);
 
-    console.log(`✅ [Trainer] Training complete for ${wallet} → 0G hash: ${rootHash}`);
+    console.log(`✅ [Trainer] Training complete for ${wallet} – storage: ${storageType}`);
+    if (uploadNote) console.log(`   Note: ${uploadNote}`);
     return record;
 
   } catch (err) {

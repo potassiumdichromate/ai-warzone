@@ -27,6 +27,24 @@ const PRIVATE_KEY  = process.env.ZERO_G_PRIVATE_KEY;
 const downloadCache = new Map();
 
 /**
+ * Get the wallet address & A0GI balance for the configured private key.
+ * @returns {Promise<{address: string, balanceEth: string, balanceWei: bigint}>}
+ */
+async function checkBalance() {
+  if (!PRIVATE_KEY || PRIVATE_KEY === "your_private_key_here") {
+    throw new Error("ZERO_G_PRIVATE_KEY is not configured");
+  }
+  const provider = new ethers.JsonRpcProvider(EVM_RPC);
+  const wallet   = new ethers.Wallet(PRIVATE_KEY, provider);
+  const balance  = await provider.getBalance(wallet.address);
+  return {
+    address:    wallet.address,
+    balanceWei: balance,
+    balanceEth: ethers.formatEther(balance)
+  };
+}
+
+/**
  * Upload a Buffer to 0G Storage.
  *
  * @param {Buffer} buffer   - File content (e.g. serialised model weights)
@@ -36,6 +54,20 @@ const downloadCache = new Map();
 async function uploadBuffer(buffer, filename = "model.bin") {
   if (!PRIVATE_KEY || PRIVATE_KEY === "your_private_key_here") {
     throw new Error("ZERO_G_PRIVATE_KEY is not set in .env");
+  }
+
+  // ── Pre-flight: check A0GI balance ──────────────────────────
+  try {
+    const { address, balanceEth, balanceWei } = await checkBalance();
+    console.log(`[0G] Wallet ${address} balance: ${balanceEth} A0GI`);
+    if (balanceWei === 0n) {
+      throw new Error(
+        `0G wallet has 0 A0GI. Fund this address on 0G mainnet (chain 16661): ${address}`
+      );
+    }
+  } catch (balErr) {
+    // Re-throw balance errors directly so they are clear in logs
+    throw balErr;
   }
 
   // Write buffer to a temp file (ZgFile.fromFilePath is most reliable)
@@ -107,4 +139,4 @@ function invalidateCache(rootHash) {
   downloadCache.delete(rootHash);
 }
 
-module.exports = { uploadBuffer, downloadBuffer, invalidateCache };
+module.exports = { uploadBuffer, downloadBuffer, invalidateCache, checkBalance };

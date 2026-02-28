@@ -69,7 +69,9 @@ async function bufferToModel(buffer) {
 
 /**
  * Load (or return cached) model for a wallet.
- * Returns null if no trained model exists yet.
+ * Supports two storage backends:
+ *   "0g"    → download weights from 0G Storage using fileHash
+ *   "local" → read modelBuffer directly from MongoDB (fallback)
  *
  * @param {string} wallet
  * @returns {Promise<tf.LayersModel|null>}
@@ -80,16 +82,30 @@ async function loadModel(wallet) {
 
   // Look up DB record
   const record = await ModelRecord.findOne({ wallet, status: "ready" });
-  if (!record || !record.fileHash) return null;
+  if (!record) return null;
 
-  // Download weights from 0G Storage
-  const buffer = await downloadBuffer(record.fileHash);
+  let buffer;
 
-  // Deserialise
+  if (record.storageType === "0g" && record.fileHash) {
+    // ── Primary path: download from 0G Storage ───────────────
+    console.log(`[ModelManager] Loading from 0G for wallet: ${wallet}`);
+    buffer = await downloadBuffer(record.fileHash);
+
+  } else if (record.storageType === "local" && record.modelBuffer) {
+    // ── Fallback path: use buffer stored in MongoDB ───────────
+    console.log(`[ModelManager] Loading from MongoDB (local) for wallet: ${wallet}`);
+    buffer = record.modelBuffer;
+
+  } else {
+    console.warn(`[ModelManager] No usable model buffer for wallet: ${wallet}`);
+    return null;
+  }
+
+  // Deserialise Buffer → tf.LayersModel
   const model = await bufferToModel(buffer);
   modelCache.set(wallet, model);
 
-  console.log(`[ModelManager] Model loaded for wallet: ${wallet}`);
+  console.log(`[ModelManager] Model ready for wallet: ${wallet} (${record.storageType})`);
   return model;
 }
 

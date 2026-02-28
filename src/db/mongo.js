@@ -54,7 +54,7 @@ const SampleSchema = new mongoose.Schema({
 // ─── Trained model record ────────────────────────────────────
 const ModelRecordSchema = new mongoose.Schema({
   wallet:       { type: String, required: true, unique: true },
-  fileHash:     { type: String },          // 0G Storage root hash
+  fileHash:     { type: String },          // 0G Storage root hash (set when storageType="0g")
   sampleCount:  { type: Number, default: 0 },
   trainedAt:    { type: Date },
   status:       {
@@ -62,6 +62,12 @@ const ModelRecordSchema = new mongoose.Schema({
     enum: ["none", "training", "ready", "error"],
     default: "none"
   },
+  // Where the model weights are stored:
+  //   "0g"    – uploaded to 0G Storage, use fileHash to fetch
+  //   "local" – saved in modelBuffer below (0G upload failed / not funded yet)
+  //   "none"  – not trained yet
+  storageType:  { type: String, enum: ["none", "0g", "local"], default: "none" },
+  modelBuffer:  { type: Buffer },          // raw weights blob (fallback when 0G unavailable)
   errorMsg:     { type: String }
 });
 

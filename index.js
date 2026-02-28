@@ -55,9 +55,11 @@ mongoose
       console.log(`   GET  /behavior/status/:wallet`);
       console.log(`   POST /behavior/retrain/:wallet`);
       console.log(`   POST /ai/predict`);
+      console.log(`   GET  /0g/wallet`);
       console.log(`   GET  /0g/status/:wallet`);
       console.log(`   GET  /0g/all`);
       console.log(`   POST /0g/verify/:wallet`);
+      console.log(`   POST /0g/push/:wallet`);
       console.log(`   GET  /health`);
     });
   })
