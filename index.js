@@ -2,9 +2,14 @@
 //  index.js  –  Warzone AI Backend Entry Point
 //
 //  Endpoints exposed:
-//    POST /behavior/upload  – Unity sends gameplay samples
-//    POST /ai/predict       – Unity requests AI action
-//    GET  /health           – sanity check
+//    POST /behavior/upload        – Unity sends gameplay samples
+//    GET  /behavior/status/:wallet – sample + model status
+//    POST /behavior/retrain/:wallet – manually retrigger training
+//    POST /ai/predict             – Unity requests AI action
+//    GET  /0g/status/:wallet      – full 0G Storage info for a wallet
+//    GET  /0g/all                 – all wallets with models on 0G
+//    POST /0g/verify/:wallet      – ping 0G Indexer to confirm file exists
+//    GET  /health                 – sanity check
 // ============================================================
 
 require("dotenv").config();
@@ -15,6 +20,7 @@ const mongoose = require("mongoose");
 
 const behaviorRoutes = require("./src/routes/behavior");
 const predictRoutes  = require("./src/routes/predict");
+const zerogRoutes    = require("./src/routes/zerog");
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -36,6 +42,7 @@ app.get("/health", (_req, res) => {
 // ─── Routes ──────────────────────────────────────────────────
 app.use("/behavior", behaviorRoutes);
 app.use("/ai",       predictRoutes);
+app.use("/0g",       zerogRoutes);
 
 // ─── MongoDB connect then start ──────────────────────────────
 mongoose
@@ -45,7 +52,12 @@ mongoose
     app.listen(PORT, () => {
       console.log(`🚀 Warzone AI backend running on port ${PORT}`);
       console.log(`   POST /behavior/upload`);
+      console.log(`   GET  /behavior/status/:wallet`);
+      console.log(`   POST /behavior/retrain/:wallet`);
       console.log(`   POST /ai/predict`);
+      console.log(`   GET  /0g/status/:wallet`);
+      console.log(`   GET  /0g/all`);
+      console.log(`   POST /0g/verify/:wallet`);
       console.log(`   GET  /health`);
     });
   })
