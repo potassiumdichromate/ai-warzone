@@ -114,10 +114,25 @@ async function uploadBuffer(buffer, filename = "model.bin") {
     }
 
     // Upload via Indexer
+    // Override fee with an explicit amount to avoid SDK underpaying the
+    // Flow contract's on-chain price check (require(msg.value >= price)).
+    // 0.01 A0GI = 10^16 wei — far above any realistic storage fee.
+    const EXPLICIT_FEE = BigInt('10000000000000000'); // 0.01 A0GI
+    console.log(`[0G] Using explicit fee: ${EXPLICIT_FEE} wei (0.01 A0GI)`);
+
+    const uploadOpts = {
+      tags:             '0x',
+      finalityRequired: true,
+      taskSize:         10,
+      expectedReplica:  1,
+      skipTx:           false,
+      fee:              EXPLICIT_FEE,
+    };
+
     const indexer = new Indexer(INDEXER_RPC);
     let txHash, uploadErr;
     try {
-      [txHash, uploadErr] = await indexer.upload(zgFile, EVM_RPC, signer);
+      [txHash, uploadErr] = await indexer.upload(zgFile, EVM_RPC, signer, uploadOpts);
     } catch (sdkEx) {
       // Catch any synchronous throws from the SDK
       console.error(`[0G] SDK threw exception:`, sdkEx?.message || sdkEx);
