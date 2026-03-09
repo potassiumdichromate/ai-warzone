@@ -9,7 +9,7 @@
 //  the model weights file for a given wallet.
 // ============================================================
 
-const { ZgFile, Indexer, getFlowContract } = require("@0glabs/0g-ts-sdk");
+const { ZgFile, Indexer } = require("@0glabs/0g-ts-sdk");
 const { ethers } = require("ethers");
 const fs   = require("fs");
 const path = require("path");
@@ -70,10 +70,20 @@ async function uploadBuffer(buffer, filename = "model.bin") {
     throw balErr;
   }
 
-  // Write buffer to a temp file (ZgFile.fromFilePath is most reliable)
+  // 0G requires the uploaded file to be a full multiple of the segment size
+  // (DEFAULT_SEGMENT_SIZE = 262 144 bytes = 256 KB).  Submitting a partial
+  // segment causes the Flow contract's on-chain validation to revert with
+  // require(false).  Pad with zero bytes to the next full segment boundary;
+  // bufferToModel() stops at the exact weight bytes it needs and ignores the
+  // trailing padding.
+  const SEGMENT_SIZE  = 262144; // 256 KB — matches 0G SDK DEFAULT_SEGMENT_SIZE
+  const paddedSize    = Math.ceil(buffer.length / SEGMENT_SIZE) * SEGMENT_SIZE;
+  const paddedBuffer  = Buffer.alloc(paddedSize, 0);
+  buffer.copy(paddedBuffer);
+
   const tmpPath = path.join(os.tmpdir(), `wz_upload_${Date.now()}_${filename}`);
-  fs.writeFileSync(tmpPath, buffer);
-  console.log(`[0G] Temp file written: ${tmpPath} (${buffer.length} bytes)`);
+  fs.writeFileSync(tmpPath, paddedBuffer);
+  console.log(`[0G] Temp file written: ${tmpPath} (${buffer.length} → ${paddedSize} bytes, padded to full segment)`);
 
   try {
     const provider = new ethers.JsonRpcProvider(EVM_RPC);
@@ -94,24 +104,9 @@ async function uploadBuffer(buffer, filename = "model.bin") {
     console.log(`[0G] INDEXER_RPC:  ${INDEXER_RPC}`);
     console.log(`[0G] EVM_RPC:      ${EVM_RPC}`);
 
-    // ── Pre-flight: try gas estimation on the Flow contract ──
-    // This surfaces the actual revert reason before the full upload attempt.
-    try {
-      const flow = getFlowContract(FLOW_ADDRESS, signer);
-      const nonce = await provider.getTransactionCount(signer.address);
-      console.log(`[0G] Signer nonce: ${nonce}`);
-
-      // Get all segments info for logging
-      const [segments, segErr] = await zgFile.segmentRoots();
-      if (segErr) {
-        console.warn(`[0G] segmentRoots warning: ${segErr}`);
-      } else {
-        console.log(`[0G] Segments to submit: ${segments?.length ?? 0}`);
-      }
-    } catch (preflightErr) {
-      console.warn(`[0G] Pre-flight check error: ${preflightErr?.message || preflightErr}`);
-      if (preflightErr?.stack) console.warn(preflightErr.stack);
-    }
+    // Log signer nonce for debugging
+    const nonce = await provider.getTransactionCount(signer.address);
+    console.log(`[0G] Signer nonce: ${nonce}`);
 
     // Upload via Indexer
     // Override fee with an explicit amount to avoid SDK underpaying the
