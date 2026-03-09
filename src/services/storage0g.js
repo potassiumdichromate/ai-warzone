@@ -73,10 +73,15 @@ async function uploadBuffer(buffer, filename = "model.bin") {
   // Write buffer to a temp file (ZgFile.fromFilePath is most reliable)
   const tmpPath = path.join(os.tmpdir(), `wz_upload_${Date.now()}_${filename}`);
   fs.writeFileSync(tmpPath, buffer);
+  console.log(`[0G] Temp file written: ${tmpPath} (${buffer.length} bytes)`);
 
   try {
     const provider = new ethers.JsonRpcProvider(EVM_RPC);
     const signer   = new ethers.Wallet(PRIVATE_KEY, provider);
+
+    // Confirm chain ID matches 0G mainnet (16661)
+    const network = await provider.getNetwork();
+    console.log(`[0G] Connected to chain ID: ${network.chainId} (expected 16661)`);
 
     // Build 0G file object
     const zgFile = await ZgFile.fromFilePath(tmpPath);
@@ -84,11 +89,52 @@ async function uploadBuffer(buffer, filename = "model.bin") {
     if (treeErr) throw new Error("0G merkle tree error: " + treeErr);
 
     const rootHash = tree.rootHash();
+    console.log(`[0G] Merkle rootHash: ${rootHash}`);
+    console.log(`[0G] FLOW_ADDRESS: ${FLOW_ADDRESS}`);
+    console.log(`[0G] INDEXER_RPC:  ${INDEXER_RPC}`);
+    console.log(`[0G] EVM_RPC:      ${EVM_RPC}`);
 
-    // Upload
+    // ── Pre-flight: try gas estimation on the Flow contract ──
+    // This surfaces the actual revert reason before the full upload attempt.
+    try {
+      const flow = getFlowContract(FLOW_ADDRESS, signer);
+      const nonce = await provider.getTransactionCount(signer.address);
+      console.log(`[0G] Signer nonce: ${nonce}`);
+
+      // Get all segments info for logging
+      const [segments, segErr] = await zgFile.segmentRoots();
+      if (segErr) {
+        console.warn(`[0G] segmentRoots warning: ${segErr}`);
+      } else {
+        console.log(`[0G] Segments to submit: ${segments?.length ?? 0}`);
+      }
+    } catch (preflightErr) {
+      console.warn(`[0G] Pre-flight check error: ${preflightErr?.message || preflightErr}`);
+      if (preflightErr?.stack) console.warn(preflightErr.stack);
+    }
+
+    // Upload via Indexer
     const indexer = new Indexer(INDEXER_RPC);
-    const [txHash, uploadErr] = await indexer.upload(zgFile, EVM_RPC, signer);
-    if (uploadErr) throw new Error("0G upload error: " + uploadErr);
+    let txHash, uploadErr;
+    try {
+      [txHash, uploadErr] = await indexer.upload(zgFile, EVM_RPC, signer);
+    } catch (sdkEx) {
+      // Catch any synchronous throws from the SDK
+      console.error(`[0G] SDK threw exception:`, sdkEx?.message || sdkEx);
+      if (sdkEx?.stack) console.error(sdkEx.stack);
+      throw new Error("0G SDK exception: " + (sdkEx?.message || sdkEx));
+    }
+
+    if (uploadErr) {
+      // Log the raw error object to expose hidden details
+      console.error(`[0G] uploadErr type: ${typeof uploadErr}`);
+      console.error(`[0G] uploadErr value:`, uploadErr);
+      if (uploadErr?.stack) console.error(`[0G] uploadErr stack:`, uploadErr.stack);
+      if (uploadErr?.reason) console.error(`[0G] uploadErr reason:`, uploadErr.reason);
+      if (uploadErr?.code) console.error(`[0G] uploadErr code:`, uploadErr.code);
+      if (uploadErr?.data) console.error(`[0G] uploadErr data:`, uploadErr.data);
+      throw new Error("0G upload error: " + (uploadErr?.message || uploadErr));
+    }
 
     console.log(`✅ [0G] Uploaded '${filename}' → rootHash: ${rootHash}`);
     console.log(`   txHash: ${txHash}`);
