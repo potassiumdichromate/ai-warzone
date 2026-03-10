@@ -1,4 +1,4 @@
-# Metal Black OPS — Player AI Agent: Full Infrastructure Documentation
+# Warzone Warrior — Player AI Agent: Full Infrastructure Documentation
 
 > **Audience:** Developers picking up this codebase from scratch.
 > **Backend repo:** https://github.com/potassiumdichromate/ai-warzone
