@@ -74,4 +74,40 @@ const ModelRecordSchema = new mongoose.Schema({
 const Sample     = mongoose.model("Sample",      SampleSchema);
 const ModelRecord = mongoose.model("ModelRecord", ModelRecordSchema);
 
-module.exports = { Sample, ModelRecord };
+// ─── AI Arena Agent ──────────────────────────────────────────
+const AgentSchema = new mongoose.Schema({
+  _id:              { type: String, required: true },   // provided by client (wallet+sig UUID)
+  name:             { type: String, required: true, minlength: 1, maxlength: 80 },
+  description:      { type: String, default: "", maxlength: 500 },
+  ownerWallet:      { type: String, required: true },
+  hotWalletAddress: { type: String, index: true },
+  currentModelId:   { type: String },
+  elo:              { type: Number, default: 1000 },
+  status:           { type: String, enum: ["ACTIVE","INACTIVE","SUSPENDED","COMPETING"], default: "ACTIVE" },
+  onChainId:        { type: String },
+  currency:         { type: Number, default: 0 },
+  x402Permission:   { type: Boolean, default: true },
+  wins:             { type: Number, default: 0 },
+  losses:           { type: Number, default: 0 },
+  totalMatches:     { type: Number, default: 0 }
+}, { timestamps: true });
+
+// ─── Arena Match ─────────────────────────────────────────────
+const ArenaSchema = new mongoose.Schema({
+  _id:             { type: String, required: true },   // random UUID generated per match
+  player1HotWallet: { type: String, required: true },
+  player2HotWallet: { type: String, required: true },
+  status:          { type: String, enum: ["PENDING","IN_PROGRESS","COMPLETED","CANCELLED"], default: "IN_PROGRESS" },
+  winnerId:        { type: String, default: null },
+  warzoneMatchId:  { type: String },
+  eloChange:       { type: Number },
+  prizeAmount:     { type: String },
+  escrowId:        { type: String },
+  startedAt:       { type: Date },
+  completedAt:     { type: Date }
+}, { timestamps: true });
+
+const Agent = mongoose.model("Agent", AgentSchema);
+const Arena = mongoose.model("Arena", ArenaSchema);
+
+module.exports = { Sample, ModelRecord, Agent, Arena };

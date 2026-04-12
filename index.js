@@ -21,6 +21,8 @@ const mongoose = require("mongoose");
 const behaviorRoutes = require("./src/routes/behavior");
 const predictRoutes  = require("./src/routes/predict");
 const zerogRoutes    = require("./src/routes/zerog");
+const agentRoutes    = require("./src/routes/agent");
+const arenaRoutes    = require("./src/routes/arena");
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -53,6 +55,8 @@ app.get("/health", (_req, res) => {
 app.use("/behavior", behaviorRoutes);
 app.use("/ai",       predictRoutes);
 app.use("/0g",       zerogRoutes);
+app.use("/agent",    agentRoutes);
+app.use("/arena",    arenaRoutes);
 
 // ─── MongoDB connect then start ──────────────────────────────
 mongoose
@@ -70,6 +74,9 @@ mongoose
       console.log(`   GET  /0g/all`);
       console.log(`   POST /0g/verify/:wallet`);
       console.log(`   POST /0g/push/:wallet`);
+      console.log(`   POST /agent/create`);
+      console.log(`   POST /agent/fund`);
+      console.log(`   POST /arena/escrow`);
       console.log(`   GET  /health`);
     });
   })
