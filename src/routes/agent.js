@@ -19,6 +19,31 @@ function generateSolanaWallet() {
   return addr;
 }
 
+// ─── GET /agent?walletAddress=0x... ─────────────────────────
+router.get("/", async (req, res) => {
+  try {
+    const { walletAddress } = req.query;
+
+    if (!walletAddress) {
+      return res.status(400).json({ error: "walletAddress query param is required" });
+    }
+
+    const agent = await Agent.findOne({ ownerWallet: walletAddress });
+
+    if (!agent) {
+      return res.status(404).json({
+        found: false,
+        message: "No agent found for this wallet address. Please create an agent first."
+      });
+    }
+
+    res.json({ found: true, agent });
+  } catch (err) {
+    console.error("[agent/get]", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── POST /agent/create ──────────────────────────────────────
 router.post("/create", async (req, res) => {
   try {
