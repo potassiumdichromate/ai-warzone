@@ -32,6 +32,7 @@ app.use(cors({
   origin: [
     "https://kult-browser-rust-l2lwg.ondigitalocean.app",
     "http://localhost:3000",
+    "https://cn.warzonewarriors.xyz/",
     "http://localhost:3001"
   ],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
