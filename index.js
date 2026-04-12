@@ -29,9 +29,13 @@ const PORT = process.env.PORT || 3001;
 
 // ─── Middleware ──────────────────────────────────────────────
 app.use(cors({
-  origin: "*",   // tighten to your domain in production
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "X-Wallet", "X-Session"]
+  origin: [
+    "https://kult-browser-rust-l2lwg.ondigitalocean.app",
+    "http://localhost:3000",
+    "http://localhost:3001"
+  ],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "X-Wallet", "X-Session", "Authorization"]
 }));
 
 app.use(express.json({ limit: "5mb" }));  // batches can be large
