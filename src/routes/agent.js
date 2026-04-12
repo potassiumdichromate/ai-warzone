@@ -28,7 +28,7 @@ router.get("/", async (req, res) => {
       return res.status(400).json({ error: "walletAddress query param is required" });
     }
 
-    const agent = await Agent.findOne({ ownerWallet: walletAddress });
+    const agent = await Agent.findOne({ ownerWallet: walletAddress.toLowerCase() });
 
     if (!agent) {
       return res.status(404).json({
@@ -60,7 +60,7 @@ router.post("/create", async (req, res) => {
       _id:             id,
       name,
       description:     description || "",
-      ownerWallet:     walletAddress,
+      ownerWallet:     walletAddress.toLowerCase(),
       hotWalletAddress,
       onChainId,
     });
