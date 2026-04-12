@@ -29,12 +29,7 @@ const PORT = process.env.PORT || 3001;
 
 // ─── Middleware ──────────────────────────────────────────────
 app.use(cors({
-  origin: [
-    "https://kult-browser-rust-l2lwg.ondigitalocean.app",
-    "http://localhost:3000",
-    "https://cn.warzonewarriors.xyz/",
-    "http://localhost:3001"
-  ],
+  origin: "*",
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "X-Wallet", "X-Session", "Authorization"]
 }));
