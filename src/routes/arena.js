@@ -63,4 +63,32 @@ router.post("/create", async (req, res) => {
   }
 });
 
+// ─── GET /arena/matches ──────────────────────────────────────
+router.get("/matches", async (req, res) => {
+  try {
+    const matches = await Arena.find({
+      status: { $in: ["OPEN", "IN_PROGRESS"] }
+    }).sort({ createdAt: -1 });
+
+    res.json({
+      total: matches.length,
+      matches: matches.map(m => ({
+        matchId:          m._id,
+        player1HotWallet: m.player1HotWallet,
+        player1Elo:       m.player1Elo,
+        player2HotWallet: m.player2HotWallet,
+        status:           m.status,
+        warzoneMatchId:   m.warzoneMatchId,
+        prizeAmount:      m.prizeAmount,
+        escrowId:         m.escrowId,
+        startedAt:        m.startedAt,
+        createdAt:        m.createdAt
+      }))
+    });
+  } catch (err) {
+    console.error("[arena/matches]", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 module.exports = router;
