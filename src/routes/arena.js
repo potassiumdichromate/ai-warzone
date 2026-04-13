@@ -1,7 +1,7 @@
 // ============================================================
 //  src/routes/arena.js  –  Arena / Match endpoints
 //
-//  POST /arena/escrow  – create a match escrow between two agents
+//  POST /arena/create  – open a new match session (player 1 only)
 // ============================================================
 
 const express    = require("express");
@@ -19,13 +19,13 @@ function generateEscrowWallet() {
   return addr;
 }
 
-// ─── POST /arena/escrow ──────────────────────────────────────
-router.post("/escrow", async (req, res) => {
+// ─── POST /arena/create ──────────────────────────────────────
+router.post("/create", async (req, res) => {
   try {
-    const { player1HotWallet, player2HotWallet, amount = 100 } = req.body;
+    const { player1HotWallet, player1Elo, amount = 100 } = req.body;
 
-    if (!player1HotWallet || !player2HotWallet) {
-      return res.status(400).json({ error: "player1HotWallet and player2HotWallet are required" });
+    if (!player1HotWallet) {
+      return res.status(400).json({ error: "player1HotWallet is required" });
     }
 
     const matchId        = uuidv4();
@@ -36,8 +36,9 @@ router.post("/escrow", async (req, res) => {
     const match = new Arena({
       _id:             matchId,
       player1HotWallet,
-      player2HotWallet,
-      status:          "IN_PROGRESS",
+      player1Elo:      player1Elo ?? null,
+      player2HotWallet: null,
+      status:          "OPEN",
       warzoneMatchId,
       prizeAmount,
       escrowId,
@@ -49,14 +50,15 @@ router.post("/escrow", async (req, res) => {
     res.status(201).json({
       matchId,
       player1HotWallet,
-      player2HotWallet,
+      player1Elo:      match.player1Elo,
+      player2HotWallet: null,
       status:          match.status,
       warzoneMatchId,
       prizeAmount,
       escrowId
     });
   } catch (err) {
-    console.error("[arena/escrow]", err);
+    console.error("[arena/create]", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -76,7 +76,7 @@ mongoose
       console.log(`   POST /0g/push/:wallet`);
       console.log(`   POST /agent/create`);
       console.log(`   POST /agent/fund`);
-      console.log(`   POST /arena/escrow`);
+      console.log(`   POST /arena/create`);
       console.log(`   GET  /health`);
     });
   })
