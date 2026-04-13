@@ -63,6 +63,53 @@ router.post("/create", async (req, res) => {
   }
 });
 
+// ─── POST /arena/join ────────────────────────────────────────
+router.post("/join", async (req, res) => {
+  try {
+    const { matchId, player2HotWallet, player2Elo } = req.body;
+
+    if (!matchId || !player2HotWallet) {
+      return res.status(400).json({ error: "matchId and player2HotWallet are required" });
+    }
+
+    const match = await Arena.findById(matchId);
+
+    if (!match) {
+      return res.status(404).json({ error: "Match not found" });
+    }
+
+    if (match.status !== "OPEN") {
+      return res.status(409).json({ error: `Match is not open for joining (current status: ${match.status})` });
+    }
+
+    if (match.player1HotWallet === player2HotWallet) {
+      return res.status(400).json({ error: "Player 2 cannot be the same as Player 1" });
+    }
+
+    match.player2HotWallet = player2HotWallet;
+    match.player2Elo       = player2Elo ?? null;
+    match.status           = "IN_PROGRESS";
+    await match.save();
+
+    res.json({
+      matchId:          match._id,
+      player1HotWallet: match.player1HotWallet,
+      player1Elo:       match.player1Elo,
+      player2HotWallet: match.player2HotWallet,
+      player2Elo:       match.player2Elo,
+      status:           match.status,
+      warzoneMatchId:   match.warzoneMatchId,
+      prizeAmount:      match.prizeAmount,
+      escrowId:         match.escrowId,
+      startedAt:        match.startedAt,
+      createdAt:        match.createdAt
+    });
+  } catch (err) {
+    console.error("[arena/join]", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── GET /arena/matches ──────────────────────────────────────
 router.get("/matches", async (req, res) => {
   try {

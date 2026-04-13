@@ -96,8 +96,9 @@ const AgentSchema = new mongoose.Schema({
 const ArenaSchema = new mongoose.Schema({
   _id:             { type: String, required: true },   // random UUID generated per match
   player1HotWallet: { type: String, required: true },
-  player1Elo:       { type: Number },
+  player1Elo:       { type: Number, default: null },
   player2HotWallet: { type: String, default: null },
+  player2Elo:       { type: Number, default: null },
   status:          { type: String, enum: ["OPEN","PENDING","IN_PROGRESS","COMPLETED","CANCELLED"], default: "OPEN" },
   winnerId:        { type: String, default: null },
   warzoneMatchId:  { type: String },

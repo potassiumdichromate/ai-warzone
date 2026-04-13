@@ -77,6 +77,7 @@ mongoose
       console.log(`   POST /agent/create`);
       console.log(`   POST /agent/fund`);
       console.log(`   POST /arena/create`);
+      console.log(`   POST /arena/join`);
       console.log(`   GET  /arena/matches`);
       console.log(`   GET  /health`);
     });
