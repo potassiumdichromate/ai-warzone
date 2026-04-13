@@ -110,6 +110,28 @@ router.post("/join", async (req, res) => {
   }
 });
 
+// ─── GET /arena/match?matchId=... ───────────────────────────
+router.get("/match", async (req, res) => {
+  try {
+    const { matchId } = req.query;
+
+    if (!matchId) {
+      return res.status(400).json({ error: "matchId query param is required" });
+    }
+
+    const match = await Arena.findById(matchId);
+
+    if (!match) {
+      return res.status(404).json({ error: "Match not found" });
+    }
+
+    res.json(match);
+  } catch (err) {
+    console.error("[arena/match]", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ─── GET /arena/matches ──────────────────────────────────────
 router.get("/matches", async (req, res) => {
   try {
